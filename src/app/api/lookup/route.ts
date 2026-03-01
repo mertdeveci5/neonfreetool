@@ -8,6 +8,7 @@ import {
 import { lookupByDomain, getAllGames } from "@/lib/game-data";
 import { computeBenchmarks, computePublisherStats } from "@/lib/analytics";
 import { IndustryBenchmarks } from "@/lib/types";
+import { sendReportEmail } from "@/lib/email";
 
 let cachedBenchmarks: IndustryBenchmarks | null = null;
 
@@ -58,6 +59,15 @@ export async function POST(req: NextRequest) {
 
   const benchmarks = getBenchmarks();
   const publisher_stats = computePublisherStats(games, benchmarks);
+
+  // Send report email (fire-and-forget, don't block response)
+  sendReportEmail({
+    to: email,
+    publisherName: games[0].publisher_name,
+    games,
+    stats: publisher_stats,
+    benchmarks,
+  }).catch((err) => console.error("Email send failed:", err));
 
   return NextResponse.json({
     matched: true,
