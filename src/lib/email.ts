@@ -1,6 +1,6 @@
 import { Resend } from "resend";
-import { PublisherStats, IndustryBenchmarks, Game } from "./types";
-import { formatCurrency, formatNumber, formatRPD, formatPercent } from "./format";
+import { PublisherStats, Game } from "./types";
+import { formatCurrency, formatPercent } from "./format";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -16,10 +16,8 @@ function getScheduledAt(): string {
 
 function extractFirstName(email: string): string | null {
   const local = email.split("@")[0];
-  // Common patterns: first.last, first_last, firstlast
   const parts = local.split(/[._-]/);
   if (parts.length >= 1 && parts[0].length >= 2) {
-    // Capitalize first letter
     return parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();
   }
   return null;
@@ -32,7 +30,6 @@ interface ReportEmailParams {
   publisherName: string;
   games: Game[];
   stats: PublisherStats;
-  benchmarks: IndustryBenchmarks;
 }
 
 export async function sendReportEmail({
@@ -40,37 +37,18 @@ export async function sendReportEmail({
   publisherName,
   games,
   stats,
-  benchmarks,
 }: ReportEmailParams) {
-  const combinedUplift = stats.total_uplift + stats.rpd_uplift;
-  const usRevenue = stats.country_revenues["us"] || 0;
-  const intlRevenue = stats.total_revenue - usRevenue;
-  const intlUplift = stats.total_uplift;
-
+  const dtc = stats.dtc_uplift;
   const firstName = extractFirstName(to);
   const greeting = firstName ? `Hi ${firstName},` : "Hi there,";
+
+  const usRevenue = stats.country_revenues["us"] || 0;
+  const nonUsRevenue = stats.total_revenue - usRevenue;
 
   // Top 5 games by revenue
   const topGames = [...games]
     .sort((a, b) => b.total_revenue - a.total_revenue)
     .slice(0, 5);
-
-  // Top uplift countries
-  const topUpliftCountries = Object.entries(stats.uplift_by_country)
-    .filter(([code, uplift]) => code !== "us" && uplift > 0)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 5);
-
-  const COUNTRY_NAMES: Record<string, string> = {
-    us: "United States", jp: "Japan", kr: "South Korea", de: "Germany",
-    gb: "United Kingdom", fr: "France", ca: "Canada", au: "Australia",
-    it: "Italy", br: "Brazil", es: "Spain", mx: "Mexico", id: "Indonesia",
-    sa: "Saudi Arabia", ae: "UAE", hk: "Hong Kong", th: "Thailand",
-    ch: "Switzerland", co: "Colombia", cl: "Chile", pe: "Peru", ar: "Argentina",
-    cn: "China", tw: "Taiwan", se: "Sweden",
-  };
-
-  const rpdStatus = stats.avg_rpd >= benchmarks.median_rpd ? "above" : "below";
 
   const html = `
 <!DOCTYPE html>
@@ -84,13 +62,13 @@ export async function sendReportEmail({
         <!-- Header -->
         <tr><td style="text-align:center;padding:0 0 32px;">
           <p style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#c4956a;margin:0 0 12px;">
-            Publisher Revenue Insights
+            DTC Revenue Insights
           </p>
           <h1 style="font-family:Georgia,serif;font-size:28px;font-weight:600;color:#e8e4df;margin:0 0 8px;">
             Revenue Report for ${publisherName}
           </h1>
           <p style="font-size:14px;color:#8a8580;margin:0;">
-            ${games.length} game${games.length !== 1 ? "s" : ""} analyzed across international markets
+            ${games.length} game${games.length !== 1 ? "s" : ""} analyzed · ${dtc.supergenre} portfolio
           </p>
         </td></tr>
 
@@ -98,21 +76,46 @@ export async function sendReportEmail({
         <tr><td style="padding:0 0 24px;">
           <p style="font-size:14px;color:#e8e4df;margin:0 0 8px;">${greeting}</p>
           <p style="font-size:14px;color:#8a8580;margin:0;line-height:1.6;">
-            Thank you for using Neon's Publisher Revenue Insights tool. We've analyzed ${publisherName}'s portfolio of ${games.length} game${games.length !== 1 ? "s" : ""} across 22 international markets. Below is a summary of what we found.
+            Thank you for using Neon's revenue insights tool. We've analyzed ${publisherName}'s portfolio to estimate the revenue uplift from shifting to direct-to-consumer channels. Here's what we found.
           </p>
         </td></tr>
 
-        <!-- Hero: Uplift -->
+        <!-- Hero: Uplift range -->
         <tr><td style="background-color:#222222;border:1px solid #2e2e2e;padding:32px;text-align:center;margin-bottom:1px;">
           <p style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#c4956a;margin:0 0 8px;">
-            Estimated Neon Contribution
+            Estimated DTC Revenue Uplift
           </p>
-          <h2 style="font-family:Georgia,serif;font-size:48px;font-weight:600;color:#e8e4df;margin:0 0 8px;">
-            ${formatCurrency(combinedUplift)}
+          <h2 style="font-family:Georgia,serif;font-size:42px;font-weight:600;color:#e8e4df;margin:0 0 8px;">
+            ${formatCurrency(dtc.uplift_low)} – ${formatCurrency(dtc.uplift_high)}
           </h2>
           <p style="font-size:14px;color:#8a8580;margin:0;">
-            in additional annual revenue by optimizing across international markets
+            in additional annual net revenue (${formatPercent(dtc.uplift_pct_low)} – ${formatPercent(dtc.uplift_pct_high)} uplift)
           </p>
+        </td></tr>
+
+        <!-- Revenue comparison table -->
+        <tr><td style="background-color:#222222;border:1px solid #2e2e2e;padding:24px;margin-top:1px;">
+          <p style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#c4956a;margin:0 0 16px;">Revenue Comparison</p>
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="padding:8px 0;font-size:12px;color:#8a8580;"></td>
+              <td style="padding:8px 0;font-size:12px;color:#8a8580;text-align:right;">App Store Only</td>
+              <td style="padding:8px 0;font-size:12px;color:#8a8580;text-align:right;">With DTC (Low)</td>
+              <td style="padding:8px 0;font-size:12px;color:#8a8580;text-align:right;">With DTC (High)</td>
+            </tr>
+            <tr style="border-top:1px solid #2e2e2e;">
+              <td style="padding:8px 0;font-size:13px;color:#e8e4df;">Net Revenue</td>
+              <td style="padding:8px 0;font-size:13px;color:#e8e4df;text-align:right;">${formatCurrency(dtc.total_net_revenue)}</td>
+              <td style="padding:8px 0;font-size:13px;color:#e8e4df;text-align:right;">${formatCurrency(dtc.total_net_with_dtc_low)}</td>
+              <td style="padding:8px 0;font-size:13px;color:#e8e4df;text-align:right;">${formatCurrency(dtc.total_net_with_dtc_high)}</td>
+            </tr>
+            <tr style="border-top:1px solid #2e2e2e;">
+              <td style="padding:8px 0;font-size:13px;color:#e8e4df;">Additional Revenue</td>
+              <td style="padding:8px 0;font-size:13px;color:#8a8580;text-align:right;">—</td>
+              <td style="padding:8px 0;font-size:13px;color:#c4956a;text-align:right;">+${formatCurrency(dtc.uplift_low)}</td>
+              <td style="padding:8px 0;font-size:13px;color:#c4956a;text-align:right;">+${formatCurrency(dtc.uplift_high)}</td>
+            </tr>
+          </table>
         </td></tr>
 
         <!-- Key Metrics -->
@@ -120,61 +123,23 @@ export async function sendReportEmail({
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
               <td width="33%" style="background-color:#222222;border:1px solid #2e2e2e;padding:20px;vertical-align:top;">
-                <p style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#c4956a;margin:0 0 6px;">Total Revenue</p>
+                <p style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#c4956a;margin:0 0 6px;">Current Net Revenue</p>
                 <p style="font-family:Georgia,serif;font-size:22px;font-weight:600;color:#e8e4df;margin:0 0 4px;">${formatCurrency(stats.total_revenue)}</p>
-                <p style="font-size:11px;color:#8a8580;margin:0;">Across all markets</p>
+                <p style="font-size:11px;color:#8a8580;margin:0;">After app store cut</p>
               </td>
               <td width="33%" style="background-color:#222222;border:1px solid #2e2e2e;padding:20px;vertical-align:top;">
-                <p style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#c4956a;margin:0 0 6px;">Total Downloads</p>
-                <p style="font-family:Georgia,serif;font-size:22px;font-weight:600;color:#e8e4df;margin:0 0 4px;">${formatNumber(stats.total_downloads)}</p>
-                <p style="font-size:11px;color:#8a8580;margin:0;">All platforms</p>
+                <p style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#c4956a;margin:0 0 6px;">US Revenue</p>
+                <p style="font-family:Georgia,serif;font-size:22px;font-weight:600;color:#e8e4df;margin:0 0 4px;">${formatCurrency(usRevenue)}</p>
+                <p style="font-size:11px;color:#8a8580;margin:0;">${formatPercent(usRevenue / stats.total_revenue)} of total</p>
               </td>
               <td width="33%" style="background-color:#222222;border:1px solid #2e2e2e;padding:20px;vertical-align:top;">
-                <p style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#c4956a;margin:0 0 6px;">Revenue Per Download</p>
-                <p style="font-family:Georgia,serif;font-size:22px;font-weight:600;color:#e8e4df;margin:0 0 4px;">${formatRPD(stats.avg_rpd)}</p>
-                <p style="font-size:11px;color:#8a8580;margin:0;">${rpdStatus === "above" ? "Above" : "Below"} industry median</p>
+                <p style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#c4956a;margin:0 0 6px;">Non-US Revenue</p>
+                <p style="font-family:Georgia,serif;font-size:22px;font-weight:600;color:#e8e4df;margin:0 0 4px;">${formatCurrency(nonUsRevenue)}</p>
+                <p style="font-size:11px;color:#8a8580;margin:0;">${formatPercent(nonUsRevenue / stats.total_revenue)} of total</p>
               </td>
             </tr>
           </table>
         </td></tr>
-
-        <!-- US vs International -->
-        <tr><td style="background-color:#222222;border:1px solid #2e2e2e;padding:24px;margin-top:1px;">
-          <p style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#c4956a;margin:0 0 16px;">Revenue Split</p>
-          <table width="100%" cellpadding="0" cellspacing="0">
-            <tr>
-              <td width="50%" style="padding-right:12px;">
-                <p style="font-size:13px;color:#8a8580;margin:0 0 4px;">United States</p>
-                <p style="font-family:Georgia,serif;font-size:20px;font-weight:600;color:#e8e4df;margin:0;">${formatCurrency(usRevenue)}</p>
-                <p style="font-size:12px;color:#8a8580;margin:4px 0 0;">${formatPercent(usRevenue / stats.total_revenue)} of total</p>
-              </td>
-              <td width="50%" style="padding-left:12px;border-left:1px solid #2e2e2e;">
-                <p style="font-size:13px;color:#8a8580;margin:0 0 4px;">International</p>
-                <p style="font-family:Georgia,serif;font-size:20px;font-weight:600;color:#e8e4df;margin:0;">
-                  ${formatCurrency(intlRevenue)}
-                  ${intlUplift > 0 ? `<span style="color:#c4956a;font-size:14px;"> +${formatCurrency(intlUplift)}</span>` : ""}
-                </p>
-                <p style="font-size:12px;color:#8a8580;margin:4px 0 0;">${formatPercent(intlRevenue / stats.total_revenue)} of total</p>
-              </td>
-            </tr>
-          </table>
-        </td></tr>
-
-        ${topUpliftCountries.length > 0 ? `
-        <!-- Top Growth Markets -->
-        <tr><td style="background-color:#222222;border:1px solid #2e2e2e;padding:24px;margin-top:1px;">
-          <p style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#c4956a;margin:0 0 16px;">Top Growth Opportunities</p>
-          <table width="100%" cellpadding="0" cellspacing="0">
-            ${topUpliftCountries.map(([code, uplift]) => `
-            <tr>
-              <td style="padding:6px 0;font-size:13px;color:#e8e4df;">${COUNTRY_NAMES[code] || code.toUpperCase()}</td>
-              <td style="padding:6px 0;font-size:13px;color:#8a8580;text-align:right;">Current: ${formatCurrency(stats.country_revenues[code] || 0)}</td>
-              <td style="padding:6px 0;font-size:13px;color:#c4956a;text-align:right;font-weight:500;">+${formatCurrency(uplift)}</td>
-            </tr>
-            `).join("")}
-          </table>
-        </td></tr>
-        ` : ""}
 
         <!-- Top Games -->
         <tr><td style="background-color:#222222;border:1px solid #2e2e2e;padding:24px;margin-top:1px;">
@@ -195,7 +160,7 @@ export async function sendReportEmail({
             Ready to unlock this potential?
           </h3>
           <p style="font-size:13px;color:#8a8580;margin:0 0 20px;max-width:400px;margin-left:auto;margin-right:auto;">
-            ${firstName ? `${firstName}, we'd` : "We'd"} love to walk you through how Neon can help ${publisherName} optimize revenue across these international markets.
+            ${firstName ? `${firstName}, we'd` : "We'd"} love to show you how Neon can help ${publisherName} shift to DTC and keep more revenue.
           </p>
           <a href="https://neon.tech" style="display:inline-block;padding:12px 32px;background-color:#c4956a;color:#1a1a1a;font-size:14px;font-weight:500;text-decoration:none;">
             Schedule a demo
@@ -205,7 +170,7 @@ export async function sendReportEmail({
         <!-- Footer -->
         <tr><td style="text-align:center;padding:24px 0;border-top:1px solid #2e2e2e;">
           <p style="font-size:11px;color:#8a8580;margin:0;">
-            This report was generated by Neon Publisher Revenue Insights.
+            This report was generated by Neon DTC Revenue Insights.
             Data is based on publicly available market estimates.
           </p>
         </td></tr>
@@ -219,7 +184,7 @@ export async function sendReportEmail({
   const { data, error } = await resend.emails.send({
     from: "Neon Insights <onboarding@resend.dev>",
     to: DEMO_RECIPIENT,
-    subject: `${firstName ? `${firstName}, ` : ""}${formatCurrency(combinedUplift)} growth opportunity for ${publisherName}`,
+    subject: `${firstName ? `${firstName}, ` : ""}${formatCurrency(dtc.uplift_low)}–${formatCurrency(dtc.uplift_high)} DTC uplift for ${publisherName}`,
     html,
     scheduledAt: getScheduledAt(),
   });
@@ -255,7 +220,7 @@ export async function sendNoMatchEmail({ to, domain }: NoMatchEmailParams) {
         <!-- Header -->
         <tr><td style="text-align:center;padding:0 0 32px;">
           <p style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#c4956a;margin:0 0 12px;">
-            Neon Publisher Insights
+            Neon DTC Insights
           </p>
           <h1 style="font-family:Georgia,serif;font-size:28px;font-weight:600;color:#e8e4df;margin:0 0 8px;">
             We'd love to learn more about your studio
@@ -266,13 +231,13 @@ export async function sendNoMatchEmail({ to, domain }: NoMatchEmailParams) {
         <tr><td style="background-color:#222222;border:1px solid #2e2e2e;padding:32px;">
           <p style="font-size:14px;color:#e8e4df;margin:0 0 16px;">${greeting}</p>
           <p style="font-size:14px;color:#8a8580;margin:0 0 16px;line-height:1.6;">
-            Thank you for trying Neon's Publisher Revenue Insights tool. We weren't able to automatically match your company (${domain}) to our database of mobile game publishers — but that doesn't mean we can't help.
+            Thank you for trying Neon's DTC Revenue Insights tool. We weren't able to automatically match your company (${domain}) to our database of mobile game publishers — but that doesn't mean we can't help.
           </p>
           <p style="font-size:14px;color:#8a8580;margin:0 0 16px;line-height:1.6;">
-            Our team can run a custom analysis for your studio. We'll look into your portfolio across 22 international markets and prepare a personalized revenue report showing where we see growth opportunities.
+            Our team can run a custom analysis for your studio, estimating how much additional revenue you could earn by shifting from app store distribution to direct-to-consumer channels.
           </p>
           <p style="font-size:14px;color:#8a8580;margin:0;line-height:1.6;">
-            We'd also be happy to give you a walkthrough of how Neon helps publishers like yours optimize international revenue with data-driven localization insights.
+            We'd also be happy to give you a walkthrough of how Neon helps publishers keep more of their revenue with lower platform fees.
           </p>
         </td></tr>
 
@@ -282,15 +247,15 @@ export async function sendNoMatchEmail({ to, domain }: NoMatchEmailParams) {
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
               <td style="padding:8px 0;font-size:13px;color:#e8e4df;vertical-align:top;width:24px;">1.</td>
-              <td style="padding:8px 0;font-size:13px;color:#8a8580;">Run a custom revenue analysis for your specific games and markets</td>
+              <td style="padding:8px 0;font-size:13px;color:#8a8580;">Run a custom DTC revenue analysis for your specific games</td>
             </tr>
             <tr>
               <td style="padding:8px 0;font-size:13px;color:#e8e4df;vertical-align:top;width:24px;">2.</td>
-              <td style="padding:8px 0;font-size:13px;color:#8a8580;">Identify your highest-potential international growth markets</td>
+              <td style="padding:8px 0;font-size:13px;color:#8a8580;">Show you how much you could save by reducing app store fees</td>
             </tr>
             <tr>
               <td style="padding:8px 0;font-size:13px;color:#e8e4df;vertical-align:top;width:24px;">3.</td>
-              <td style="padding:8px 0;font-size:13px;color:#8a8580;">Walk you through a live demo of Neon's platform and insights</td>
+              <td style="padding:8px 0;font-size:13px;color:#8a8580;">Walk you through a live demo of Neon's DTC platform</td>
             </tr>
           </table>
         </td></tr>
@@ -311,7 +276,7 @@ export async function sendNoMatchEmail({ to, domain }: NoMatchEmailParams) {
         <!-- Footer -->
         <tr><td style="text-align:center;padding:24px 0;border-top:1px solid #2e2e2e;">
           <p style="font-size:11px;color:#8a8580;margin:0;">
-            This email was sent by Neon Publisher Revenue Insights.
+            This email was sent by Neon DTC Revenue Insights.
           </p>
         </td></tr>
 
@@ -324,7 +289,7 @@ export async function sendNoMatchEmail({ to, domain }: NoMatchEmailParams) {
   const { data, error } = await resend.emails.send({
     from: "Neon Insights <onboarding@resend.dev>",
     to: DEMO_RECIPIENT,
-    subject: `${firstName ? `${firstName}, ` : ""}Let's build a custom revenue report for your studio`,
+    subject: `${firstName ? `${firstName}, ` : ""}Let's build a custom DTC revenue report for your studio`,
     html,
     scheduledAt: getScheduledAt(),
   });

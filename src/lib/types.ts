@@ -33,20 +33,51 @@ export interface LookupResponse {
   matched: boolean;
   publisher_name?: string;
   games?: Game[];
-  benchmarks?: IndustryBenchmarks;
   publisher_stats?: PublisherStats;
 }
 
-export interface GenreBenchmarks {
-  median_us_share: number;
-  top_quartile_us_share: number;
-  median_rpd: number;
-  top_quartile_rpd: number;
-  top_quartile_country_shares: Record<string, number>;
-}
+// DTC uplift calculation result (low end and high end)
+export interface DtcUplift {
+  // Inputs
+  us_net_revenue: number;
+  non_us_net_revenue: number;
+  total_net_revenue: number;
+  supergenre: Supergenre;
 
-export interface IndustryBenchmarks extends GenreBenchmarks {
-  by_supergenre: Record<string, GenreBenchmarks>;
+  // Step 1: Gross up
+  us_gross_revenue: number;
+  non_us_gross_revenue: number;
+  total_gross_revenue: number;
+
+  // Step 2: DTC shift (low/high)
+  direct_checkout_rate_low: number;
+  direct_checkout_rate_high: number;
+  webshop_rate_low: number;
+  webshop_rate_high: number;
+
+  direct_checkout_gross_low: number;
+  direct_checkout_gross_high: number;
+  webshop_gross_low: number;
+  webshop_gross_high: number;
+
+  total_dtc_gross_low: number;
+  total_dtc_gross_high: number;
+
+  // Step 3 + 4: Net revenue by channel
+  app_store_remaining_gross_low: number;
+  app_store_remaining_gross_high: number;
+  app_store_net_low: number;
+  app_store_net_high: number;
+  dtc_net_low: number;
+  dtc_net_high: number;
+  total_net_with_dtc_low: number;
+  total_net_with_dtc_high: number;
+
+  // Step 5: Uplift
+  uplift_low: number;
+  uplift_high: number;
+  uplift_pct_low: number;
+  uplift_pct_high: number;
 }
 
 export interface PublisherStats {
@@ -56,7 +87,5 @@ export interface PublisherStats {
   us_share: number;
   country_shares: Record<string, number>;
   country_revenues: Record<string, number>;
-  uplift_by_country: Record<string, number>;
-  total_uplift: number;
-  rpd_uplift: number;
+  dtc_uplift: DtcUplift;
 }

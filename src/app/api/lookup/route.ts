@@ -5,19 +5,9 @@ import {
   isValidEmail,
   normalizeDomain,
 } from "@/lib/domain-utils";
-import { lookupByDomain, getAllGames } from "@/lib/game-data";
-import { computeBenchmarks, computePublisherStats } from "@/lib/analytics";
-import { IndustryBenchmarks } from "@/lib/types";
+import { lookupByDomain } from "@/lib/game-data";
+import { computePublisherStats } from "@/lib/analytics";
 import { sendReportEmail, sendNoMatchEmail } from "@/lib/email";
-
-let cachedBenchmarks: IndustryBenchmarks | null = null;
-
-function getBenchmarks(): IndustryBenchmarks {
-  if (!cachedBenchmarks) {
-    cachedBenchmarks = computeBenchmarks(getAllGames());
-  }
-  return cachedBenchmarks;
-}
 
 export async function POST(req: NextRequest) {
   let body: { email?: string };
@@ -61,8 +51,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ matched: false });
   }
 
-  const benchmarks = getBenchmarks();
-  const publisher_stats = computePublisherStats(games, benchmarks);
+  const publisher_stats = computePublisherStats(games);
 
   // Send report email (fire-and-forget, don't block response)
   sendReportEmail({
@@ -70,14 +59,12 @@ export async function POST(req: NextRequest) {
     publisherName: games[0].publisher_name,
     games,
     stats: publisher_stats,
-    benchmarks,
   }).catch((err) => console.error("Email send failed:", err));
 
   return NextResponse.json({
     matched: true,
     publisher_name: games[0].publisher_name,
     games,
-    benchmarks,
     publisher_stats,
   });
 }

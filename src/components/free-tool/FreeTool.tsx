@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FlowStep, Game, IndustryBenchmarks, PublisherStats } from "@/lib/types";
+import { FlowStep, Game, PublisherStats } from "@/lib/types";
 import { StepIndicator } from "@/components/ui/StepIndicator";
 import { EmailStep } from "./EmailStep";
 import { ConfirmStep } from "./ConfirmStep";
@@ -11,7 +11,6 @@ import { NoMatchStep } from "./NoMatchStep";
 interface LookupData {
   publisher_name: string;
   games: Game[];
-  benchmarks: IndustryBenchmarks;
   publisher_stats: PublisherStats;
 }
 
@@ -48,7 +47,6 @@ export function FreeTool() {
       setData({
         publisher_name: body.publisher_name,
         games: body.games,
-        benchmarks: body.benchmarks,
         publisher_stats: body.publisher_stats,
       });
       setStep("confirm");
@@ -97,7 +95,6 @@ export function FreeTool() {
           <ResultsStep
             publisherName={data.publisher_name}
             games={data.games}
-            benchmarks={data.benchmarks}
             stats={data.publisher_stats}
             onReset={handleReset}
           />

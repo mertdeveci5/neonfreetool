@@ -1,111 +1,124 @@
-import {
-  Game,
-  GenreBenchmarks,
-  IndustryBenchmarks,
-  PublisherStats,
-  COUNTRY_CODES,
-  Supergenre,
-} from "./types";
+import { Game, PublisherStats, DtcUplift, Supergenre, COUNTRY_CODES } from "./types";
 
-function median(values: number[]): number {
-  if (values.length === 0) return 0;
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 !== 0
-    ? sorted[mid]
-    : (sorted[mid - 1] + sorted[mid]) / 2;
-}
+// App store takes 30%, publisher gets 70%
+const APP_STORE_CUT = 0.30;
+const APP_STORE_NET_RATE = 1 - APP_STORE_CUT; // 0.70
 
-function topQuartile(values: number[]): number {
-  if (values.length === 0) return 0;
-  const sorted = [...values].sort((a, b) => a - b);
-  const idx = Math.floor(sorted.length * 0.75);
-  return sorted[Math.min(idx, sorted.length - 1)];
-}
+// Neon DTC takes 6%, publisher gets 94%
+const NEON_DTC_CUT = 0.06;
+const NEON_DTC_NET_RATE = 1 - NEON_DTC_CUT; // 0.94
 
-interface PublisherAggregate {
-  total_revenue: number;
-  total_downloads: number;
-  country_revenues: Record<string, number>;
-}
+// DTC conversion rates by supergenre
+// Direct checkout = US market, Webshop = non-US markets
+const DTC_RATES: Record<Supergenre, {
+  direct_checkout_low: number;
+  direct_checkout_high: number;
+  webshop_low: number;
+  webshop_high: number;
+}> = {
+  Core: {
+    direct_checkout_low: 0.25,
+    direct_checkout_high: 0.60,
+    webshop_low: 0.20,
+    webshop_high: 0.65,
+  },
+  Casino: {
+    direct_checkout_low: 0.25,
+    direct_checkout_high: 0.60,
+    webshop_low: 0.20,
+    webshop_high: 0.65,
+  },
+  Casual: {
+    direct_checkout_low: 0.25,
+    direct_checkout_high: 0.60,
+    webshop_low: 0.08,
+    webshop_high: 0.35,
+  },
+};
 
-function aggregateByPublisher(games: Game[]): Map<string, PublisherAggregate> {
-  const map = new Map<string, PublisherAggregate>();
+function computeDtcUplift(
+  usNetRevenue: number,
+  nonUsNetRevenue: number,
+  supergenre: Supergenre
+): DtcUplift {
+  const totalNetRevenue = usNetRevenue + nonUsNetRevenue;
 
-  for (const game of games) {
-    const key = game.publisher_name;
-    let agg = map.get(key);
-    if (!agg) {
-      agg = { total_revenue: 0, total_downloads: 0, country_revenues: {} };
-      for (const cc of COUNTRY_CODES) {
-        agg.country_revenues[cc] = 0;
-      }
-      map.set(key, agg);
-    }
-    agg.total_revenue += game.total_revenue;
-    agg.total_downloads += game.total_downloads;
-    for (const cc of COUNTRY_CODES) {
-      const revenueKey = `${cc}_revenue` as keyof Game;
-      agg.country_revenues[cc] += (game[revenueKey] as number) || 0;
-    }
-  }
+  // Step 1: Gross up revenue (reverse the 30% app store cut)
+  const usGross = usNetRevenue / APP_STORE_NET_RATE;
+  const nonUsGross = nonUsNetRevenue / APP_STORE_NET_RATE;
+  const totalGross = totalNetRevenue / APP_STORE_NET_RATE;
 
-  return map;
-}
+  // Step 2: DTC revenue calculation
+  const rates = DTC_RATES[supergenre];
 
-function computeGenreBenchmarks(
-  publishers: PublisherAggregate[]
-): GenreBenchmarks {
-  const meaningful = publishers.filter((p) => p.total_revenue > 10000);
+  const directCheckoutGrossLow = usGross * rates.direct_checkout_low;
+  const directCheckoutGrossHigh = usGross * rates.direct_checkout_high;
+  const webshopGrossLow = nonUsGross * rates.webshop_low;
+  const webshopGrossHigh = nonUsGross * rates.webshop_high;
 
-  const usShares = meaningful.map((p) =>
-    p.total_revenue > 0 ? p.country_revenues["us"] / p.total_revenue : 0
-  );
+  const totalDtcGrossLow = directCheckoutGrossLow + webshopGrossLow;
+  const totalDtcGrossHigh = directCheckoutGrossHigh + webshopGrossHigh;
 
-  const rpds = meaningful
-    .filter((p) => p.total_downloads > 0)
-    .map((p) => p.total_revenue / p.total_downloads);
+  // Step 3: Split revenue — remaining on app store
+  const appStoreRemainingGrossLow = totalGross - totalDtcGrossLow;
+  const appStoreRemainingGrossHigh = totalGross - totalDtcGrossHigh;
 
-  const topQuartileCountryShares: Record<string, number> = {};
-  for (const cc of COUNTRY_CODES) {
-    const shares = meaningful.map((p) =>
-      p.total_revenue > 0 ? p.country_revenues[cc] / p.total_revenue : 0
-    );
-    topQuartileCountryShares[cc] = topQuartile(shares);
-  }
+  // Step 4: Net revenue by channel
+  const appStoreNetLow = appStoreRemainingGrossLow * APP_STORE_NET_RATE;
+  const appStoreNetHigh = appStoreRemainingGrossHigh * APP_STORE_NET_RATE;
+  const dtcNetLow = totalDtcGrossLow * NEON_DTC_NET_RATE;
+  const dtcNetHigh = totalDtcGrossHigh * NEON_DTC_NET_RATE;
 
-  return {
-    median_us_share: median(usShares),
-    top_quartile_us_share: topQuartile(usShares),
-    median_rpd: median(rpds),
-    top_quartile_rpd: topQuartile(rpds),
-    top_quartile_country_shares: topQuartileCountryShares,
-  };
-}
+  const totalNetWithDtcLow = appStoreNetLow + dtcNetLow;
+  const totalNetWithDtcHigh = appStoreNetHigh + dtcNetHigh;
 
-export function computeBenchmarks(allGames: Game[]): IndustryBenchmarks {
-  // Global benchmarks (all games)
-  const allPublishers = aggregateByPublisher(allGames);
-  const globalBenchmarks = computeGenreBenchmarks([...allPublishers.values()]);
-
-  // Per-supergenre benchmarks
-  const supergenres: Supergenre[] = ["Core", "Casual", "Casino"];
-  const bySupergenre: Record<string, GenreBenchmarks> = {};
-
-  for (const sg of supergenres) {
-    const genreGames = allGames.filter((g) => g.supergenre === sg);
-    const genrePublishers = aggregateByPublisher(genreGames);
-    bySupergenre[sg] = computeGenreBenchmarks([...genrePublishers.values()]);
-  }
+  // Step 5: Uplift
+  const upliftLow = totalNetWithDtcLow - totalNetRevenue;
+  const upliftHigh = totalNetWithDtcHigh - totalNetRevenue;
+  const upliftPctLow = totalNetRevenue > 0 ? upliftLow / totalNetRevenue : 0;
+  const upliftPctHigh = totalNetRevenue > 0 ? upliftHigh / totalNetRevenue : 0;
 
   return {
-    ...globalBenchmarks,
-    by_supergenre: bySupergenre,
+    us_net_revenue: usNetRevenue,
+    non_us_net_revenue: nonUsNetRevenue,
+    total_net_revenue: totalNetRevenue,
+    supergenre,
+
+    us_gross_revenue: usGross,
+    non_us_gross_revenue: nonUsGross,
+    total_gross_revenue: totalGross,
+
+    direct_checkout_rate_low: rates.direct_checkout_low,
+    direct_checkout_rate_high: rates.direct_checkout_high,
+    webshop_rate_low: rates.webshop_low,
+    webshop_rate_high: rates.webshop_high,
+
+    direct_checkout_gross_low: directCheckoutGrossLow,
+    direct_checkout_gross_high: directCheckoutGrossHigh,
+    webshop_gross_low: webshopGrossLow,
+    webshop_gross_high: webshopGrossHigh,
+
+    total_dtc_gross_low: totalDtcGrossLow,
+    total_dtc_gross_high: totalDtcGrossHigh,
+
+    app_store_remaining_gross_low: appStoreRemainingGrossLow,
+    app_store_remaining_gross_high: appStoreRemainingGrossHigh,
+    app_store_net_low: appStoreNetLow,
+    app_store_net_high: appStoreNetHigh,
+    dtc_net_low: dtcNetLow,
+    dtc_net_high: dtcNetHigh,
+    total_net_with_dtc_low: totalNetWithDtcLow,
+    total_net_with_dtc_high: totalNetWithDtcHigh,
+
+    uplift_low: upliftLow,
+    uplift_high: upliftHigh,
+    uplift_pct_low: upliftPctLow,
+    uplift_pct_high: upliftPctHigh,
   };
 }
 
 // Determine the dominant supergenre for a set of games (by revenue)
-function getDominantSupergenre(games: Game[]): Supergenre | null {
+function getDominantSupergenre(games: Game[]): Supergenre {
   const revenueByGenre: Record<string, number> = {};
   for (const game of games) {
     if (game.supergenre) {
@@ -114,15 +127,12 @@ function getDominantSupergenre(games: Game[]): Supergenre | null {
     }
   }
   const entries = Object.entries(revenueByGenre);
-  if (entries.length === 0) return null;
+  if (entries.length === 0) return "Casual"; // default to Casual (most conservative)
   entries.sort(([, a], [, b]) => b - a);
   return entries[0][0] as Supergenre;
 }
 
-export function computePublisherStats(
-  publisherGames: Game[],
-  benchmarks: IndustryBenchmarks
-): PublisherStats {
+export function computePublisherStats(publisherGames: Game[]): PublisherStats {
   const totalRevenue = publisherGames.reduce(
     (sum, g) => sum + g.total_revenue,
     0
@@ -145,42 +155,13 @@ export function computePublisherStats(
     countryShares[cc] = totalRevenue > 0 ? rev / totalRevenue : 0;
   }
 
-  // Use supergenre-specific benchmarks if available, otherwise fall back to global
-  const dominantGenre = getDominantSupergenre(publisherGames);
-  const genreBenchmarks =
-    dominantGenre && benchmarks.by_supergenre[dominantGenre]
-      ? benchmarks.by_supergenre[dominantGenre]
-      : benchmarks;
+  const usRevenue = countryRevenues["us"] || 0;
+  const nonUsRevenue = totalRevenue - usRevenue;
 
-  // Uplift: for each non-US country where publisher is below their genre benchmark,
-  // capped at 1x current country revenue (floor at 0.2% of total revenue).
-  // US is excluded because Neon's value prop is international market optimization.
-  const upliftByCountry: Record<string, number> = {};
-  let totalUplift = 0;
-
-  for (const cc of COUNTRY_CODES) {
-    if (cc === "us") {
-      upliftByCountry[cc] = 0;
-      continue;
-    }
-    const benchmarkShare = genreBenchmarks.top_quartile_country_shares[cc] || 0;
-    const publisherShare = countryShares[cc];
-    const gap = Math.max(0, benchmarkShare - publisherShare);
-    const rawUplift = gap * totalRevenue;
-    // Cap: no more than doubling current revenue in a market;
-    // floor ensures tiny/zero-revenue markets still show some opportunity
-    const cap = Math.max(countryRevenues[cc], totalRevenue * 0.002);
-    const uplift = Math.min(rawUplift, cap);
-    upliftByCountry[cc] = uplift;
-    totalUplift += uplift;
-  }
-
-  // RPD uplift — also use genre-specific median
   const avgRpd = totalDownloads > 0 ? totalRevenue / totalDownloads : 0;
-  const rpdUplift =
-    avgRpd < genreBenchmarks.median_rpd && totalDownloads > 0
-      ? (genreBenchmarks.median_rpd - avgRpd) * totalDownloads
-      : 0;
+  const dominantSupergenre = getDominantSupergenre(publisherGames);
+
+  const dtcUplift = computeDtcUplift(usRevenue, nonUsRevenue, dominantSupergenre);
 
   return {
     total_revenue: totalRevenue,
@@ -189,8 +170,6 @@ export function computePublisherStats(
     us_share: countryShares["us"] || 0,
     country_shares: countryShares,
     country_revenues: countryRevenues,
-    uplift_by_country: upliftByCountry,
-    total_uplift: totalUplift,
-    rpd_uplift: rpdUplift,
+    dtc_uplift: dtcUplift,
   };
 }

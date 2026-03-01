@@ -1,106 +1,101 @@
 "use client";
 
-import { formatCurrency } from "@/lib/format";
+import { DtcUplift } from "@/lib/types";
+import { formatCurrency, formatPercent } from "@/lib/format";
 
 interface UpliftVisualizationProps {
-  countryRevenues: Record<string, number>;
-  upliftByCountry: Record<string, number>;
-  totalUplift: number;
-  rpdUplift: number;
+  dtcUplift: DtcUplift;
 }
 
-export function UpliftVisualization({
-  countryRevenues,
-  upliftByCountry,
-  totalUplift,
-  rpdUplift,
-}: UpliftVisualizationProps) {
-  const usRevenue = countryRevenues["us"] || 0;
-  const intlRevenue = Object.entries(countryRevenues)
-    .filter(([code]) => code !== "us")
-    .reduce((sum, [, rev]) => sum + rev, 0);
-  const intlUplift = Object.entries(upliftByCountry)
-    .filter(([code]) => code !== "us")
-    .reduce((sum, [, up]) => sum + up, 0);
+export function UpliftVisualization({ dtcUplift: dtc }: UpliftVisualizationProps) {
+  const maxVal = Math.max(
+    dtc.total_net_revenue,
+    dtc.total_net_with_dtc_high
+  );
 
-  const combinedUplift = totalUplift + rpdUplift;
-  const maxVal = Math.max(usRevenue, intlRevenue + intlUplift);
+  const currentWidth = maxVal > 0 ? (dtc.total_net_revenue / maxVal) * 100 : 0;
+  const lowWidth = maxVal > 0 ? (dtc.total_net_with_dtc_low / maxVal) * 100 : 0;
+  const highWidth = maxVal > 0 ? (dtc.total_net_with_dtc_high / maxVal) * 100 : 0;
 
-  const usWidth = maxVal > 0 ? (usRevenue / maxVal) * 100 : 0;
-  const intlCurrentWidth = maxVal > 0 ? (intlRevenue / maxVal) * 100 : 0;
-  const intlUpliftWidth = maxVal > 0 ? (intlUplift / maxVal) * 100 : 0;
+  // For the DTC high bar, split into app store portion and DTC portion
+  const appStoreHighWidth = maxVal > 0 ? (dtc.app_store_net_high / maxVal) * 100 : 0;
+  const dtcHighWidth = maxVal > 0 ? (dtc.dtc_net_high / maxVal) * 100 : 0;
 
   return (
     <div className="border border-border p-5">
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-6">
-        <div>
-          <h3 className="text-xs uppercase tracking-wider text-accent mb-1">
-            International Revenue Opportunity
-          </h3>
-          <p className="text-xs text-muted">
-            Your current US vs. international revenue split, with estimated
-            growth potential in under-indexed international markets
-          </p>
-        </div>
-        {combinedUplift > 0 && (
-          <div className="border border-accent/30 bg-accent/5 px-4 py-2.5 shrink-0">
-            <p className="text-xs text-accent mb-0.5">
-              Estimated additional annual revenue
-            </p>
-            <p className="text-xl font-semibold font-serif text-foreground">
-              {formatCurrency(combinedUplift)}
-            </p>
-          </div>
-        )}
-      </div>
+      <h3 className="text-xs uppercase tracking-wider text-accent mb-1">
+        DTC Revenue Uplift
+      </h3>
+      <p className="text-xs text-muted mb-5">
+        Net revenue comparison: app store only vs. with Neon DTC channels
+      </p>
 
       <div className="space-y-5">
-        {/* US bar */}
+        {/* Current: App Store Only */}
         <div>
           <div className="flex items-baseline justify-between mb-2">
             <span className="text-sm font-medium text-foreground">
-              United States
+              App Store Only (Today)
             </span>
             <span className="text-sm tabular-nums text-foreground">
-              {formatCurrency(usRevenue)}
+              {formatCurrency(dtc.total_net_revenue)}
             </span>
           </div>
           <div className="h-8 bg-border/30">
             <div
-              className="h-full bg-accent"
-              style={{ width: `${usWidth}%` }}
+              className="h-full bg-muted/40"
+              style={{ width: `${currentWidth}%` }}
             />
           </div>
         </div>
 
-        {/* International bar */}
+        {/* With DTC: Low estimate */}
         <div>
           <div className="flex items-baseline justify-between mb-2">
             <span className="text-sm font-medium text-foreground">
-              International
+              With Neon DTC (Low)
             </span>
             <div className="flex items-baseline gap-2">
               <span className="text-sm tabular-nums text-foreground">
-                {formatCurrency(intlRevenue)}
+                {formatCurrency(dtc.total_net_with_dtc_low)}
               </span>
-              {intlUplift > 0 && (
-                <span className="text-sm tabular-nums text-accent">
-                  +{formatCurrency(intlUplift)}
-                </span>
-              )}
+              <span className="text-sm tabular-nums text-accent">
+                +{formatPercent(dtc.uplift_pct_low)}
+              </span>
+            </div>
+          </div>
+          <div className="h-8 bg-border/30">
+            <div
+              className="h-full bg-accent"
+              style={{ width: `${lowWidth}%` }}
+            />
+          </div>
+        </div>
+
+        {/* With DTC: High estimate */}
+        <div>
+          <div className="flex items-baseline justify-between mb-2">
+            <span className="text-sm font-medium text-foreground">
+              With Neon DTC (High)
+            </span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-sm tabular-nums text-foreground">
+                {formatCurrency(dtc.total_net_with_dtc_high)}
+              </span>
+              <span className="text-sm tabular-nums text-accent">
+                +{formatPercent(dtc.uplift_pct_high)}
+              </span>
             </div>
           </div>
           <div className="h-8 bg-border/30 flex">
             <div
-              className="h-full bg-accent"
-              style={{ width: `${intlCurrentWidth}%` }}
+              className="h-full bg-accent/60"
+              style={{ width: `${appStoreHighWidth}%` }}
             />
-            {intlUplift > 0 && (
-              <div
-                className="h-full bg-accent/20 border-y border-r border-accent/40 border-dashed"
-                style={{ width: `${intlUpliftWidth}%` }}
-              />
-            )}
+            <div
+              className="h-full bg-accent"
+              style={{ width: `${dtcHighWidth}%` }}
+            />
           </div>
         </div>
       </div>
@@ -108,12 +103,12 @@ export function UpliftVisualization({
       {/* Legend */}
       <div className="flex items-center gap-5 mt-4 text-xs text-muted">
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 bg-accent" />
-          <span>Current Revenue</span>
+          <div className="w-3 h-3 bg-muted/40" />
+          <span>App Store Revenue</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 bg-accent/20 border border-accent/40 border-dashed" />
-          <span>Potential Uplift</span>
+          <div className="w-3 h-3 bg-accent" />
+          <span>DTC Revenue</span>
         </div>
       </div>
     </div>
