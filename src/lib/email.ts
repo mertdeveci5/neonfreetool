@@ -130,12 +130,12 @@ export async function sendReportEmail({
               <td width="33%" style="background-color:#222222;border:1px solid #2e2e2e;padding:20px;vertical-align:top;">
                 <p style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#c4956a;margin:0 0 6px;">US Revenue</p>
                 <p style="font-family:Georgia,serif;font-size:22px;font-weight:600;color:#e8e4df;margin:0 0 4px;">${formatCurrency(usRevenue)}</p>
-                <p style="font-size:11px;color:#8a8580;margin:0;">${formatPercent(usRevenue / stats.total_revenue)} of total</p>
+                <p style="font-size:11px;color:#8a8580;margin:0;">${stats.total_revenue > 0 ? formatPercent(usRevenue / stats.total_revenue) : "0.0%"} of total</p>
               </td>
               <td width="33%" style="background-color:#222222;border:1px solid #2e2e2e;padding:20px;vertical-align:top;">
                 <p style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#c4956a;margin:0 0 6px;">Non-US Revenue</p>
                 <p style="font-family:Georgia,serif;font-size:22px;font-weight:600;color:#e8e4df;margin:0 0 4px;">${formatCurrency(nonUsRevenue)}</p>
-                <p style="font-size:11px;color:#8a8580;margin:0;">${formatPercent(nonUsRevenue / stats.total_revenue)} of total</p>
+                <p style="font-size:11px;color:#8a8580;margin:0;">${stats.total_revenue > 0 ? formatPercent(nonUsRevenue / stats.total_revenue) : "0.0%"} of total</p>
               </td>
             </tr>
           </table>

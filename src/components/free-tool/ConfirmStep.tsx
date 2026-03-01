@@ -49,16 +49,16 @@ export function ConfirmStep({
               </tr>
             </thead>
             <tbody>
-              {games.map((game, i) => (
+              {games.map((game) => (
                 <tr
-                  key={i}
+                  key={game.app_name}
                   className="border-b border-border last:border-b-0 hover:bg-surface-hover transition-colors"
                 >
                   <td className="py-2.5 px-4 font-medium text-foreground">
                     {game.app_name}
                   </td>
                   <td className="py-2.5 px-4 text-muted hidden sm:table-cell">
-                    {game.subcategory.split(",")[0]}
+                    {game.subcategory?.split(",")[0] ?? "—"}
                   </td>
                   <td className="py-2.5 px-4 text-right tabular-nums text-foreground">
                     {formatCurrency(game.total_revenue)}

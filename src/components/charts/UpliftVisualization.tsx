@@ -60,7 +60,7 @@ export function UpliftVisualization({ dtcUplift: dtc }: UpliftVisualizationProps
     },
   ];
 
-  const maxVal = dtc.total_net_with_dtc_high;
+  const maxVal = Math.max(dtc.total_net_with_dtc_high, dtc.total_net_revenue, 1);
 
   return (
     <div className="border border-border p-5">
