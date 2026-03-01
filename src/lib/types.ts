@@ -10,11 +10,14 @@ export type CountryRevenues = {
   [K in `${CountryCode}_revenue`]: number;
 };
 
+export type Supergenre = "Core" | "Casual" | "Casino";
+
 export interface Game extends CountryRevenues {
   app_name: string;
   publisher_name: string;
   publisher_country: string;
   subcategory: string;
+  supergenre: Supergenre | null;
   domain: string | null;
   total_revenue: number;
   total_downloads: number;
@@ -34,12 +37,16 @@ export interface LookupResponse {
   publisher_stats?: PublisherStats;
 }
 
-export interface IndustryBenchmarks {
+export interface GenreBenchmarks {
   median_us_share: number;
   top_quartile_us_share: number;
   median_rpd: number;
   top_quartile_rpd: number;
   top_quartile_country_shares: Record<string, number>;
+}
+
+export interface IndustryBenchmarks extends GenreBenchmarks {
+  by_supergenre: Record<string, GenreBenchmarks>;
 }
 
 export interface PublisherStats {

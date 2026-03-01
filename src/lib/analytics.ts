@@ -1,4 +1,11 @@
-import { Game, IndustryBenchmarks, PublisherStats, COUNTRY_CODES } from "./types";
+import {
+  Game,
+  GenreBenchmarks,
+  IndustryBenchmarks,
+  PublisherStats,
+  COUNTRY_CODES,
+  Supergenre,
+} from "./types";
 
 function median(values: number[]): number {
   if (values.length === 0) return 0;
@@ -46,13 +53,10 @@ function aggregateByPublisher(games: Game[]): Map<string, PublisherAggregate> {
   return map;
 }
 
-export function computeBenchmarks(allGames: Game[]): IndustryBenchmarks {
-  const publishers = aggregateByPublisher(allGames);
-
-  // Filter publishers with meaningful revenue (>$10k)
-  const meaningful = [...publishers.values()].filter(
-    (p) => p.total_revenue > 10000
-  );
+function computeGenreBenchmarks(
+  publishers: PublisherAggregate[]
+): GenreBenchmarks {
+  const meaningful = publishers.filter((p) => p.total_revenue > 10000);
 
   const usShares = meaningful.map((p) =>
     p.total_revenue > 0 ? p.country_revenues["us"] / p.total_revenue : 0
@@ -62,7 +66,6 @@ export function computeBenchmarks(allGames: Game[]): IndustryBenchmarks {
     .filter((p) => p.total_downloads > 0)
     .map((p) => p.total_revenue / p.total_downloads);
 
-  // Compute top-quartile country share mix
   const topQuartileCountryShares: Record<string, number> = {};
   for (const cc of COUNTRY_CODES) {
     const shares = meaningful.map((p) =>
@@ -78,6 +81,42 @@ export function computeBenchmarks(allGames: Game[]): IndustryBenchmarks {
     top_quartile_rpd: topQuartile(rpds),
     top_quartile_country_shares: topQuartileCountryShares,
   };
+}
+
+export function computeBenchmarks(allGames: Game[]): IndustryBenchmarks {
+  // Global benchmarks (all games)
+  const allPublishers = aggregateByPublisher(allGames);
+  const globalBenchmarks = computeGenreBenchmarks([...allPublishers.values()]);
+
+  // Per-supergenre benchmarks
+  const supergenres: Supergenre[] = ["Core", "Casual", "Casino"];
+  const bySupergenre: Record<string, GenreBenchmarks> = {};
+
+  for (const sg of supergenres) {
+    const genreGames = allGames.filter((g) => g.supergenre === sg);
+    const genrePublishers = aggregateByPublisher(genreGames);
+    bySupergenre[sg] = computeGenreBenchmarks([...genrePublishers.values()]);
+  }
+
+  return {
+    ...globalBenchmarks,
+    by_supergenre: bySupergenre,
+  };
+}
+
+// Determine the dominant supergenre for a set of games (by revenue)
+function getDominantSupergenre(games: Game[]): Supergenre | null {
+  const revenueByGenre: Record<string, number> = {};
+  for (const game of games) {
+    if (game.supergenre) {
+      revenueByGenre[game.supergenre] =
+        (revenueByGenre[game.supergenre] || 0) + game.total_revenue;
+    }
+  }
+  const entries = Object.entries(revenueByGenre);
+  if (entries.length === 0) return null;
+  entries.sort(([, a], [, b]) => b - a);
+  return entries[0][0] as Supergenre;
 }
 
 export function computePublisherStats(
@@ -106,7 +145,14 @@ export function computePublisherStats(
     countryShares[cc] = totalRevenue > 0 ? rev / totalRevenue : 0;
   }
 
-  // Uplift: for each non-US country where publisher is below benchmark,
+  // Use supergenre-specific benchmarks if available, otherwise fall back to global
+  const dominantGenre = getDominantSupergenre(publisherGames);
+  const genreBenchmarks =
+    dominantGenre && benchmarks.by_supergenre[dominantGenre]
+      ? benchmarks.by_supergenre[dominantGenre]
+      : benchmarks;
+
+  // Uplift: for each non-US country where publisher is below their genre benchmark,
   // capped at 1x current country revenue (floor at 0.2% of total revenue).
   // US is excluded because Neon's value prop is international market optimization.
   const upliftByCountry: Record<string, number> = {};
@@ -117,7 +163,7 @@ export function computePublisherStats(
       upliftByCountry[cc] = 0;
       continue;
     }
-    const benchmarkShare = benchmarks.top_quartile_country_shares[cc] || 0;
+    const benchmarkShare = genreBenchmarks.top_quartile_country_shares[cc] || 0;
     const publisherShare = countryShares[cc];
     const gap = Math.max(0, benchmarkShare - publisherShare);
     const rawUplift = gap * totalRevenue;
@@ -129,11 +175,11 @@ export function computePublisherStats(
     totalUplift += uplift;
   }
 
-  // RPD uplift
+  // RPD uplift — also use genre-specific median
   const avgRpd = totalDownloads > 0 ? totalRevenue / totalDownloads : 0;
   const rpdUplift =
-    avgRpd < benchmarks.median_rpd && totalDownloads > 0
-      ? (benchmarks.median_rpd - avgRpd) * totalDownloads
+    avgRpd < genreBenchmarks.median_rpd && totalDownloads > 0
+      ? (genreBenchmarks.median_rpd - avgRpd) * totalDownloads
       : 0;
 
   return {
