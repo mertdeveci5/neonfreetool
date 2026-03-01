@@ -8,7 +8,7 @@ import {
 import { lookupByDomain, getAllGames } from "@/lib/game-data";
 import { computeBenchmarks, computePublisherStats } from "@/lib/analytics";
 import { IndustryBenchmarks } from "@/lib/types";
-import { sendReportEmail } from "@/lib/email";
+import { sendReportEmail, sendNoMatchEmail } from "@/lib/email";
 
 let cachedBenchmarks: IndustryBenchmarks | null = null;
 
@@ -54,6 +54,10 @@ export async function POST(req: NextRequest) {
   const games = lookupByDomain(normalizedDomain);
 
   if (!games || games.length === 0) {
+    // Send no-match email (fire-and-forget)
+    sendNoMatchEmail({ to: email, domain: normalizedDomain }).catch((err) =>
+      console.error("No-match email send failed:", err)
+    );
     return NextResponse.json({ matched: false });
   }
 
