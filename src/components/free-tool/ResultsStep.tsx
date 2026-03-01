@@ -1,7 +1,15 @@
 "use client";
 
+import Image from "next/image";
 import { Game, PublisherStats } from "@/lib/types";
 import { formatCurrency, formatNumber, formatRPD, formatPercent } from "@/lib/format";
+
+const PAYMENT_LOGOS = [
+  "applepay", "gpay", "paypal", "cashapp", "klarna",
+  "alipay", "wechatpay", "samsung-pay", "kakao", "line-pay",
+  "naver-pay", "pix", "ideal", "sepa", "upi",
+  "grab-pay", "dana", "ovo", "blik", "oxxo",
+];
 import { MetricCard } from "@/components/ui/MetricCard";
 import { RevenueDonut } from "@/components/charts/RevenueDonut";
 import { TopCountriesBar } from "@/components/charts/TopCountriesBar";
@@ -132,8 +140,42 @@ export function ResultsStep({
         </table>
       </div>
 
+      {/* Payment coverage */}
+      <div className="border border-border p-5 mb-px">
+        <h3 className="text-xs uppercase tracking-wider text-accent mb-1">
+          Accept payments everywhere
+        </h3>
+        <p className="text-xs text-muted mb-4">
+          Coverage across 100% of top 50 gaming markets. Tax, fraud, security, and compliance — all handled.
+        </p>
+        <div className="flex flex-wrap gap-3 items-center">
+          {PAYMENT_LOGOS.map((logo) => (
+            <div
+              key={logo}
+              className="w-10 h-7 bg-surface-hover rounded flex items-center justify-center p-1.5"
+            >
+              <Image
+                src={`/img/payment-logos/${logo}.svg`}
+                alt={logo}
+                width={28}
+                height={20}
+                className="opacity-70"
+              />
+            </div>
+          ))}
+          <span className="text-xs text-muted ml-1">+7 more</span>
+        </div>
+      </div>
+
       {/* CTA */}
-      <div className="border border-border p-8 text-center">
+      <div className="border border-border p-8 text-center mb-10">
+        <Image
+          src="/neon-logo.png"
+          alt="Neon Commerce"
+          width={40}
+          height={40}
+          className="mx-auto mb-4"
+        />
         <h3 className="text-xl font-serif font-semibold mb-2 text-foreground">
           Take control of your commerce
         </h3>

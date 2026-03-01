@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 
 interface EmailStepProps {
   onSubmit: (email: string) => void;
@@ -20,6 +21,13 @@ export function EmailStep({ onSubmit, isLoading, error }: EmailStepProps) {
 
   return (
     <div className="flex flex-col items-center text-center max-w-xl mx-auto">
+      <Image
+        src="/neon-logo.png"
+        alt="Neon Commerce"
+        width={48}
+        height={48}
+        className="mb-5"
+      />
       <p className="text-xs uppercase tracking-widest text-accent mb-4">
         Neon Commerce
       </p>
