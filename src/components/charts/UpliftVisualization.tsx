@@ -7,108 +7,132 @@ interface UpliftVisualizationProps {
   dtcUplift: DtcUplift;
 }
 
+interface WaterfallBar {
+  label: string;
+  value: number;
+  displayValue: string;
+  subtitle?: string;
+  isTotal?: boolean;
+  isUplift?: boolean;
+  startFrom: number; // Where the bar starts (cumulative)
+}
+
 export function UpliftVisualization({ dtcUplift: dtc }: UpliftVisualizationProps) {
-  const maxVal = Math.max(
-    dtc.total_net_revenue,
-    dtc.total_net_with_dtc_high
-  );
+  // Waterfall: Current → +Low Uplift → = Low Total → +High Uplift → = High Total
+  const bars: WaterfallBar[] = [
+    {
+      label: "Current Net Revenue",
+      value: dtc.total_net_revenue,
+      displayValue: formatCurrency(dtc.total_net_revenue),
+      subtitle: "App store only",
+      isTotal: true,
+      startFrom: 0,
+    },
+    {
+      label: "DTC Uplift (Low)",
+      value: dtc.uplift_low,
+      displayValue: `+${formatCurrency(dtc.uplift_low)}`,
+      subtitle: formatPercent(dtc.uplift_pct_low),
+      isUplift: true,
+      startFrom: dtc.total_net_revenue,
+    },
+    {
+      label: "With Neon (Low)",
+      value: dtc.total_net_with_dtc_low,
+      displayValue: formatCurrency(dtc.total_net_with_dtc_low),
+      isTotal: true,
+      startFrom: 0,
+    },
+    {
+      label: "DTC Uplift (High)",
+      value: dtc.uplift_high,
+      displayValue: `+${formatCurrency(dtc.uplift_high)}`,
+      subtitle: formatPercent(dtc.uplift_pct_high),
+      isUplift: true,
+      startFrom: dtc.total_net_revenue,
+    },
+    {
+      label: "With Neon (High)",
+      value: dtc.total_net_with_dtc_high,
+      displayValue: formatCurrency(dtc.total_net_with_dtc_high),
+      isTotal: true,
+      startFrom: 0,
+    },
+  ];
 
-  const currentWidth = maxVal > 0 ? (dtc.total_net_revenue / maxVal) * 100 : 0;
-  const lowWidth = maxVal > 0 ? (dtc.total_net_with_dtc_low / maxVal) * 100 : 0;
-  const highWidth = maxVal > 0 ? (dtc.total_net_with_dtc_high / maxVal) * 100 : 0;
-
-  // For the DTC high bar, split into app store portion and DTC portion
-  const appStoreHighWidth = maxVal > 0 ? (dtc.app_store_net_high / maxVal) * 100 : 0;
-  const dtcHighWidth = maxVal > 0 ? (dtc.dtc_net_high / maxVal) * 100 : 0;
+  const maxVal = dtc.total_net_with_dtc_high;
 
   return (
     <div className="border border-border p-5">
       <h3 className="text-xs uppercase tracking-wider text-accent mb-1">
-        DTC Revenue Uplift
+        DTC Revenue Waterfall
       </h3>
-      <p className="text-xs text-muted mb-5">
-        Net revenue comparison: app store only vs. going direct with Neon
+      <p className="text-xs text-muted mb-6">
+        How going direct with Neon adds to your net revenue
       </p>
 
-      <div className="space-y-5">
-        {/* Current: App Store Only */}
-        <div>
-          <div className="flex items-baseline justify-between mb-2">
-            <span className="text-sm font-medium text-foreground">
-              App Store Only (Today)
-            </span>
-            <span className="text-sm tabular-nums text-foreground">
-              {formatCurrency(dtc.total_net_revenue)}
-            </span>
-          </div>
-          <div className="h-8 bg-border/30">
-            <div
-              className="h-full bg-muted/40"
-              style={{ width: `${currentWidth}%` }}
-            />
-          </div>
-        </div>
+      <div className="space-y-3">
+        {bars.map((bar, i) => {
+          const barWidth = maxVal > 0 ? (bar.value / maxVal) * 100 : 0;
+          const offsetLeft = maxVal > 0 ? (bar.startFrom / maxVal) * 100 : 0;
 
-        {/* With DTC: Low estimate */}
-        <div>
-          <div className="flex items-baseline justify-between mb-2">
-            <span className="text-sm font-medium text-foreground">
-              With Neon (Low)
-            </span>
-            <div className="flex items-baseline gap-2">
-              <span className="text-sm tabular-nums text-foreground">
-                {formatCurrency(dtc.total_net_with_dtc_low)}
-              </span>
-              <span className="text-sm tabular-nums text-accent">
-                +{formatPercent(dtc.uplift_pct_low)}
-              </span>
+          return (
+            <div key={i}>
+              <div className="flex items-baseline justify-between mb-1.5">
+                <span className={`text-sm ${bar.isTotal ? "font-medium text-foreground" : "text-muted"}`}>
+                  {bar.label}
+                </span>
+                <div className="flex items-baseline gap-2">
+                  <span className={`text-sm tabular-nums ${bar.isUplift ? "text-accent font-medium" : "text-foreground"}`}>
+                    {bar.displayValue}
+                  </span>
+                  {bar.subtitle && (
+                    <span className={`text-xs ${bar.isUplift ? "text-accent/70" : "text-muted"}`}>
+                      {bar.subtitle}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="relative h-7 bg-border/20">
+                <div
+                  className={`absolute top-0 h-full transition-all ${
+                    bar.isUplift
+                      ? "bg-accent"
+                      : bar.isTotal && i === 0
+                        ? "bg-muted/30"
+                        : "bg-accent/25"
+                  }`}
+                  style={{
+                    left: `${offsetLeft}%`,
+                    width: `${barWidth}%`,
+                  }}
+                />
+                {/* Connector line from previous total to uplift */}
+                {bar.isUplift && (
+                  <div
+                    className="absolute top-0 h-full border-l border-dashed border-muted/40"
+                    style={{ left: `${offsetLeft}%` }}
+                  />
+                )}
+              </div>
             </div>
-          </div>
-          <div className="h-8 bg-border/30">
-            <div
-              className="h-full bg-accent"
-              style={{ width: `${lowWidth}%` }}
-            />
-          </div>
-        </div>
-
-        {/* With DTC: High estimate */}
-        <div>
-          <div className="flex items-baseline justify-between mb-2">
-            <span className="text-sm font-medium text-foreground">
-              With Neon (High)
-            </span>
-            <div className="flex items-baseline gap-2">
-              <span className="text-sm tabular-nums text-foreground">
-                {formatCurrency(dtc.total_net_with_dtc_high)}
-              </span>
-              <span className="text-sm tabular-nums text-accent">
-                +{formatPercent(dtc.uplift_pct_high)}
-              </span>
-            </div>
-          </div>
-          <div className="h-8 bg-border/30 flex">
-            <div
-              className="h-full bg-accent/60"
-              style={{ width: `${appStoreHighWidth}%` }}
-            />
-            <div
-              className="h-full bg-accent"
-              style={{ width: `${dtcHighWidth}%` }}
-            />
-          </div>
-        </div>
+          );
+        })}
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-5 mt-4 text-xs text-muted">
+      <div className="flex items-center gap-5 mt-5 text-xs text-muted">
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 bg-muted/40" />
-          <span>App Store Revenue</span>
+          <div className="w-3 h-3 bg-muted/30" />
+          <span>Current Revenue</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 bg-accent" />
-          <span>DTC Revenue</span>
+          <span>DTC Uplift</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 bg-accent/25" />
+          <span>New Total</span>
         </div>
       </div>
     </div>

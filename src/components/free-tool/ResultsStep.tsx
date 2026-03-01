@@ -3,13 +3,6 @@
 import Image from "next/image";
 import { Game, PublisherStats } from "@/lib/types";
 import { formatCurrency, formatNumber, formatRPD, formatPercent } from "@/lib/format";
-
-const PAYMENT_LOGOS = [
-  "applepay", "gpay", "paypal", "cashapp", "klarna",
-  "alipay", "wechatpay", "samsung-pay", "kakao", "line-pay",
-  "naver-pay", "pix", "ideal", "sepa", "upi",
-  "grab-pay", "dana", "ovo", "blik", "oxxo",
-];
 import { MetricCard } from "@/components/ui/MetricCard";
 import { RevenueDonut } from "@/components/charts/RevenueDonut";
 import { TopCountriesBar } from "@/components/charts/TopCountriesBar";
@@ -95,76 +88,14 @@ export function ResultsStep({
         <TopCountriesBar countryRevenues={stats.country_revenues} />
       </div>
 
-      {/* Row 3: Geo Diversity + DTC Uplift Breakdown */}
-      <div className="grid grid-cols-1 md:grid-cols-2 mb-px">
-        <div className="border-b md:border-b-0 md:border-r border-border">
-          <GeoDistribution countryShares={stats.country_shares} />
-        </div>
+      {/* Row 3: Geo Diversity */}
+      <div className="mb-px">
+        <GeoDistribution countryShares={stats.country_shares} />
+      </div>
+
+      {/* Row 4: Full-width DTC Waterfall */}
+      <div className="mb-10">
         <UpliftVisualization dtcUplift={dtc} />
-      </div>
-
-      {/* Row 4: Full-width revenue comparison */}
-      <div className="border border-border p-5 mb-10">
-        <h3 className="text-xs uppercase tracking-wider text-accent mb-4">
-          Revenue Comparison
-        </h3>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-muted text-left">
-              <th className="pb-3 font-normal"></th>
-              <th className="pb-3 font-normal text-right">App Store Only</th>
-              <th className="pb-3 font-normal text-right">With DTC (Low)</th>
-              <th className="pb-3 font-normal text-right">With DTC (High)</th>
-            </tr>
-          </thead>
-          <tbody className="text-foreground">
-            <tr className="border-t border-border">
-              <td className="py-3">Net Revenue</td>
-              <td className="py-3 text-right tabular-nums">{formatCurrency(dtc.total_net_revenue)}</td>
-              <td className="py-3 text-right tabular-nums">{formatCurrency(dtc.total_net_with_dtc_low)}</td>
-              <td className="py-3 text-right tabular-nums">{formatCurrency(dtc.total_net_with_dtc_high)}</td>
-            </tr>
-            <tr className="border-t border-border">
-              <td className="py-3">Additional Revenue</td>
-              <td className="py-3 text-right text-muted">—</td>
-              <td className="py-3 text-right tabular-nums text-accent">+{formatCurrency(dtc.uplift_low)}</td>
-              <td className="py-3 text-right tabular-nums text-accent">+{formatCurrency(dtc.uplift_high)}</td>
-            </tr>
-            <tr className="border-t border-border">
-              <td className="py-3">Uplift</td>
-              <td className="py-3 text-right text-muted">—</td>
-              <td className="py-3 text-right tabular-nums text-accent">+{formatPercent(dtc.uplift_pct_low)}</td>
-              <td className="py-3 text-right tabular-nums text-accent">+{formatPercent(dtc.uplift_pct_high)}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      {/* Payment coverage */}
-      <div className="border border-border p-5 mb-px">
-        <h3 className="text-xs uppercase tracking-wider text-accent mb-1">
-          Accept payments everywhere
-        </h3>
-        <p className="text-xs text-muted mb-4">
-          Coverage across 100% of top 50 gaming markets. Tax, fraud, security, and compliance — all handled.
-        </p>
-        <div className="flex flex-wrap gap-3 items-center">
-          {PAYMENT_LOGOS.map((logo) => (
-            <div
-              key={logo}
-              className="w-10 h-7 bg-surface-hover rounded flex items-center justify-center p-1.5"
-            >
-              <Image
-                src={`/img/payment-logos/${logo}.svg`}
-                alt={logo}
-                width={28}
-                height={20}
-                className="opacity-70"
-              />
-            </div>
-          ))}
-          <span className="text-xs text-muted ml-1">+7 more</span>
-        </div>
       </div>
 
       {/* CTA */}
