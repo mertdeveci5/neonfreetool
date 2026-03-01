@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# raw data files
+/data/
+
+# python scripts (local classification tools)
+scripts/*.py
