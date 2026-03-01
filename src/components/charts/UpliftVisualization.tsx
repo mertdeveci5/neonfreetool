@@ -27,7 +27,7 @@ export function UpliftVisualization({ dtcUplift: dtc }: UpliftVisualizationProps
         DTC Revenue Uplift
       </h3>
       <p className="text-xs text-muted mb-5">
-        Net revenue comparison: app store only vs. with Neon DTC channels
+        Net revenue comparison: app store only vs. going direct with Neon
       </p>
 
       <div className="space-y-5">
@@ -53,7 +53,7 @@ export function UpliftVisualization({ dtcUplift: dtc }: UpliftVisualizationProps
         <div>
           <div className="flex items-baseline justify-between mb-2">
             <span className="text-sm font-medium text-foreground">
-              With Neon DTC (Low)
+              With Neon (Low)
             </span>
             <div className="flex items-baseline gap-2">
               <span className="text-sm tabular-nums text-foreground">
@@ -76,7 +76,7 @@ export function UpliftVisualization({ dtcUplift: dtc }: UpliftVisualizationProps
         <div>
           <div className="flex items-baseline justify-between mb-2">
             <span className="text-sm font-medium text-foreground">
-              With Neon DTC (High)
+              With Neon (High)
             </span>
             <div className="flex items-baseline gap-2">
               <span className="text-sm tabular-nums text-foreground">

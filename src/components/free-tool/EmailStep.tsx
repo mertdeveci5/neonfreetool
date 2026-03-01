@@ -21,14 +21,14 @@ export function EmailStep({ onSubmit, isLoading, error }: EmailStepProps) {
   return (
     <div className="flex flex-col items-center text-center max-w-xl mx-auto">
       <p className="text-xs uppercase tracking-widest text-accent mb-4">
-        Publisher Revenue Insights
+        Neon Commerce
       </p>
       <h1 className="text-4xl md:text-5xl font-serif font-semibold tracking-tight leading-tight mb-4 text-foreground">
-        Discover your global revenue potential.
+        See how much more you could earn going direct.
       </h1>
       <p className="text-lg text-muted mb-10 max-w-md">
-        Enter your work email to see how your games perform across 22 markets —
-        and where you could be earning more.
+        Enter your work email and we&apos;ll calculate how much additional revenue
+        your games could generate by shifting to direct-to-consumer with Neon.
       </p>
 
       <form onSubmit={handleSubmit} className="w-full max-w-sm">
@@ -61,7 +61,7 @@ export function EmailStep({ onSubmit, isLoading, error }: EmailStepProps) {
       </form>
 
       <p className="text-xs text-muted mt-8">
-        We match your email domain to our database of 2,600+ mobile games.
+        We match your email domain to our database of 2,600+ mobile games to estimate your DTC revenue potential.
       </p>
     </div>
   );

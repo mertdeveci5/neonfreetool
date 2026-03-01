@@ -20,13 +20,13 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Publisher Revenue Insights — Neon",
+  title: "DTC Revenue Calculator — Neon Commerce",
   description:
-    "Discover your global mobile game revenue potential across 22 markets. Free analytics for game publishers.",
+    "See how much more revenue you could earn by going direct-to-consumer. Free DTC calculator for game developers.",
   openGraph: {
-    title: "Publisher Revenue Insights — Neon",
+    title: "DTC Revenue Calculator — Neon Commerce",
     description:
-      "Discover your global mobile game revenue potential across 22 markets.",
+      "See how much more revenue you could earn by going direct-to-consumer with Neon.",
     type: "website",
   },
 };

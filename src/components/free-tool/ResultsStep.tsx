@@ -28,13 +28,13 @@ export function ResultsStep({
       {/* Hero — Neon's estimated contribution */}
       <div className="text-center mb-12 pt-4">
         <p className="text-xs uppercase tracking-widest text-accent mb-3">
-          Estimated Neon DTC revenue uplift for {publisherName}
+          Neon Commerce — DTC revenue estimate for {publisherName}
         </p>
         <h2 className="text-5xl sm:text-6xl md:text-7xl font-serif font-semibold tracking-tight text-foreground leading-none">
           {formatCurrency(dtc.uplift_low)} – {formatCurrency(dtc.uplift_high)}
         </h2>
         <p className="text-lg text-muted mt-3 max-w-lg mx-auto">
-          in additional annual net revenue by shifting to direct-to-consumer channels
+          in additional annual net revenue by going direct with Neon
         </p>
         <p className="text-sm text-muted mt-1">
           {games.length} game{games.length !== 1 ? "s" : ""} analyzed
@@ -135,11 +135,11 @@ export function ResultsStep({
       {/* CTA */}
       <div className="border border-border p-8 text-center">
         <h3 className="text-xl font-serif font-semibold mb-2 text-foreground">
-          Ready to unlock this potential?
+          Take control of your commerce
         </h3>
         <p className="text-sm text-muted mb-5 max-w-md mx-auto">
-          Neon helps mobile game publishers shift to direct-to-consumer revenue
-          channels, keeping more of what your players spend.
+          Neon gives game developers full visibility, predictable flat-rate fees,
+          and the freedom to go direct — through Neon Shop, Neon Checkout, or Neon Direct Checkout.
         </p>
         <a
           href="https://neon.tech"
@@ -147,7 +147,7 @@ export function ResultsStep({
           rel="noopener noreferrer"
           className="inline-block py-3 px-8 bg-accent text-background font-medium hover:bg-accent/90 transition-colors"
         >
-          Get in touch
+          Talk to an Expert
         </a>
       </div>
     </div>
