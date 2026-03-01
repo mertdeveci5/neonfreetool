@@ -4,6 +4,9 @@ import { formatCurrency, formatNumber, formatRPD, formatPercent } from "./format
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+// Override recipient for demo/sandbox — all reports go to this address
+const DEMO_RECIPIENT = "mert@troylabs.io";
+
 interface ReportEmailParams {
   to: string;
   publisherName: string;
@@ -184,7 +187,7 @@ export async function sendReportEmail({
 
   const { data, error } = await resend.emails.send({
     from: "Neon Insights <onboarding@resend.dev>",
-    to,
+    to: DEMO_RECIPIENT,
     subject: `Revenue Report: ${formatCurrency(combinedUplift)} growth opportunity for ${publisherName}`,
     html,
   });
