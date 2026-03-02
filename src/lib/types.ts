@@ -73,7 +73,11 @@ export interface DtcUplift {
   total_net_with_dtc_low: number;
   total_net_with_dtc_high: number;
 
-  // Step 5: Uplift
+  // Step 5: Uplift (total and per-channel)
+  direct_checkout_uplift_low: number;
+  direct_checkout_uplift_high: number;
+  webshop_uplift_low: number;
+  webshop_uplift_high: number;
   uplift_low: number;
   uplift_high: number;
   uplift_pct_low: number;

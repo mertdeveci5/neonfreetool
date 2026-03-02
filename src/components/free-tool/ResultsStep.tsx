@@ -77,7 +77,12 @@ export function ResultsStep({
         </div>
       </div>
 
-      {/* Row 2: Donut + Top Countries */}
+      {/* Row 2: DTC Waterfall (moved up per CMO feedback) */}
+      <div className="mb-px">
+        <UpliftVisualization dtcUplift={dtc} />
+      </div>
+
+      {/* Row 3: Donut + Top Countries */}
       <div className="grid grid-cols-1 md:grid-cols-2 mb-px">
         <div className="border-b md:border-b-0 md:border-r border-border">
           <RevenueDonut
@@ -88,14 +93,9 @@ export function ResultsStep({
         <TopCountriesBar countryRevenues={stats.country_revenues} />
       </div>
 
-      {/* Row 3: Geo Diversity */}
-      <div className="mb-px">
-        <GeoDistribution countryShares={stats.country_shares} />
-      </div>
-
-      {/* Row 4: Full-width DTC Waterfall */}
+      {/* Row 4: Geo Diversity */}
       <div className="mb-10">
-        <UpliftVisualization dtcUplift={dtc} />
+        <GeoDistribution countryShares={stats.country_shares} />
       </div>
 
       {/* CTA */}

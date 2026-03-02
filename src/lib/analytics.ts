@@ -72,7 +72,13 @@ function computeDtcUplift(
   const totalNetWithDtcLow = appStoreNetLow + dtcNetLow;
   const totalNetWithDtcHigh = appStoreNetHigh + dtcNetHigh;
 
-  // Step 5: Uplift
+  // Step 5: Uplift (total and per-channel)
+  const feeSavingsRate = NEON_DTC_NET_RATE - APP_STORE_NET_RATE; // 0.94 - 0.70 = 0.24
+  const dcUpliftLow = directCheckoutGrossLow * feeSavingsRate;
+  const dcUpliftHigh = directCheckoutGrossHigh * feeSavingsRate;
+  const wsUpliftLow = webshopGrossLow * feeSavingsRate;
+  const wsUpliftHigh = webshopGrossHigh * feeSavingsRate;
+
   const upliftLow = totalNetWithDtcLow - totalNetRevenue;
   const upliftHigh = totalNetWithDtcHigh - totalNetRevenue;
   const upliftPctLow = totalNetRevenue > 0 ? upliftLow / totalNetRevenue : 0;
@@ -110,6 +116,10 @@ function computeDtcUplift(
     total_net_with_dtc_low: totalNetWithDtcLow,
     total_net_with_dtc_high: totalNetWithDtcHigh,
 
+    direct_checkout_uplift_low: dcUpliftLow,
+    direct_checkout_uplift_high: dcUpliftHigh,
+    webshop_uplift_low: wsUpliftLow,
+    webshop_uplift_high: wsUpliftHigh,
     uplift_low: upliftLow,
     uplift_high: upliftHigh,
     uplift_pct_low: upliftPctLow,
