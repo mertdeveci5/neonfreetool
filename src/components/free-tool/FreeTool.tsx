@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { FlowStep, Game, PublisherStats } from "@/lib/types";
+import { computePublisherStats } from "@/lib/analytics";
 import { StepIndicator } from "@/components/ui/StepIndicator";
 import { EmailStep } from "./EmailStep";
 import { ConfirmStep } from "./ConfirmStep";
@@ -92,7 +93,16 @@ export function FreeTool() {
     }
   }
 
-  function handleConfirm() {
+  function handleConfirm(selectedGames: Game[]) {
+    setData((prev) =>
+      prev
+        ? {
+            ...prev,
+            games: selectedGames,
+            publisher_stats: computePublisherStats(selectedGames),
+          }
+        : prev
+    );
     setStep("results");
   }
 
