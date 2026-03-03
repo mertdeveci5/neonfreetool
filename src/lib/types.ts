@@ -84,6 +84,12 @@ export interface DtcUplift {
   uplift_pct_high: number;
 }
 
+export interface PublisherSearchResult {
+  publisher_name: string;
+  game_count: number;
+  total_revenue: number;
+}
+
 export interface PublisherStats {
   total_revenue: number;
   total_downloads: number;

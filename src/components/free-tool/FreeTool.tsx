@@ -57,6 +57,41 @@ export function FreeTool() {
     }
   }
 
+  async function handleCompanySelect(publisherName: string) {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch(
+        `/api/publisher-lookup?name=${encodeURIComponent(publisherName)}`
+      );
+
+      if (!res.ok) {
+        const body = await res.json();
+        setError(body.error || "Something went wrong");
+        return;
+      }
+
+      const body = await res.json();
+
+      if (!body.matched) {
+        setStep("no-match");
+        return;
+      }
+
+      setData({
+        publisher_name: body.publisher_name,
+        games: body.games,
+        publisher_stats: body.publisher_stats,
+      });
+      setStep("confirm");
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   function handleConfirm() {
     setStep("results");
   }
@@ -77,6 +112,7 @@ export function FreeTool() {
         {step === "email" && (
           <EmailStep
             onSubmit={handleEmailSubmit}
+            onCompanySelect={handleCompanySelect}
             isLoading={isLoading}
             error={error}
           />
