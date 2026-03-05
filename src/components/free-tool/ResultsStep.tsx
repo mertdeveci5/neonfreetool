@@ -2,11 +2,8 @@
 
 import Image from "next/image";
 import { Game, PublisherStats } from "@/lib/types";
-import { formatCurrency, formatNumber, formatRPD, formatPercent } from "@/lib/format";
+import { formatCurrency, formatPercent } from "@/lib/format";
 import { MetricCard } from "@/components/ui/MetricCard";
-import { RevenueDonut } from "@/components/charts/RevenueDonut";
-import { TopCountriesBar } from "@/components/charts/TopCountriesBar";
-import { GeoDistribution } from "@/components/charts/GeoDistribution";
 import { UpliftVisualization } from "@/components/charts/UpliftVisualization";
 
 interface ResultsStepProps {
@@ -14,6 +11,7 @@ interface ResultsStepProps {
   games: Game[];
   stats: PublisherStats;
   onReset: () => void;
+  userEmail: string | null;
 }
 
 export function ResultsStep({
@@ -21,6 +19,7 @@ export function ResultsStep({
   games,
   stats,
   onReset,
+  userEmail,
 }: ResultsStepProps) {
   const dtc = stats.dtc_uplift;
 
@@ -55,47 +54,28 @@ export function ResultsStep({
       </div>
 
       {/* Row 1: Metric cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 border border-border mb-px">
+      <div className="grid grid-cols-1 sm:grid-cols-2 border border-border mb-px">
         <MetricCard
-          label="Current Net Revenue"
-          value={formatCurrency(stats.total_revenue)}
-          subtitle="Across all markets (after app store cut)"
+          label="2025 Estimated IAP Gross Revenue"
+          value={formatCurrency(dtc.total_gross_revenue)}
+          subtitle="Before app store / platform fees"
         />
         <div className="border-t sm:border-t-0 sm:border-l border-border">
           <MetricCard
-            label="Total Downloads"
-            value={formatNumber(stats.total_downloads)}
-            subtitle="All platforms"
-          />
-        </div>
-        <div className="border-t sm:border-t-0 sm:border-l border-border">
-          <MetricCard
-            label="Revenue Per Download"
-            value={formatRPD(stats.avg_rpd)}
-            subtitle="Across all markets"
+            label="2025 Estimated IAP Net Revenue"
+            value={formatCurrency(stats.total_revenue)}
+            subtitle="After app store cut (30%)"
           />
         </div>
       </div>
 
-      {/* Row 2: DTC Waterfall (moved up per CMO feedback) */}
+      {/* Row 2: DTC Waterfall */}
       <div className="mb-px">
-        <UpliftVisualization dtcUplift={dtc} />
-      </div>
-
-      {/* Row 3: Donut + Top Countries */}
-      <div className="grid grid-cols-1 md:grid-cols-2 mb-px">
-        <div className="border-b md:border-b-0 md:border-r border-border">
-          <RevenueDonut
-            usRevenue={stats.country_revenues["us"] || 0}
-            totalRevenue={stats.total_revenue}
-          />
-        </div>
-        <TopCountriesBar countryRevenues={stats.country_revenues} />
-      </div>
-
-      {/* Row 4: Geo Diversity */}
-      <div className="mb-10">
-        <GeoDistribution countryShares={stats.country_shares} />
+        <UpliftVisualization
+          dtcUplift={dtc}
+          gated={!userEmail}
+          publisherName={publisherName}
+        />
       </div>
 
       {/* CTA */}

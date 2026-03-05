@@ -20,10 +20,12 @@ export function FreeTool() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<LookupData | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   async function handleEmailSubmit(email: string) {
     setIsLoading(true);
     setError(null);
+    setUserEmail(email);
 
     try {
       const res = await fetch("/api/lookup", {
@@ -61,6 +63,7 @@ export function FreeTool() {
   async function handleCompanySelect(publisherName: string) {
     setIsLoading(true);
     setError(null);
+    setUserEmail(null);
 
     try {
       const res = await fetch(
@@ -110,6 +113,7 @@ export function FreeTool() {
     setStep("email");
     setData(null);
     setError(null);
+    setUserEmail(null);
   }
 
   return (
@@ -143,6 +147,7 @@ export function FreeTool() {
             games={data.games}
             stats={data.publisher_stats}
             onReset={handleReset}
+            userEmail={userEmail}
           />
         )}
 
